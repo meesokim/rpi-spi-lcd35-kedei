@@ -65,14 +65,15 @@ int spi_open(void) {
 	
 	bcm2835_spi_begin();
 	bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST); // MSB bit goes first
-    bcm2835_spi_setDataMode(BCM2835_SPI_MODE0); // mode 0
-    bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_8); // SPI_CLK 31.25MHz - MAX
-    //bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_64);
-    bcm2835_spi_chipSelect(BCM2835_SPI_CS1); // CS1 - for now, with TP CS0 will be used too
+	bcm2835_spi_setDataMode(BCM2835_SPI_MODE3); // mode 0
+	bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_8); // SPI_CLK 31.25MHz - MAX
+	//bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_64);
+	bcm2835_spi_chipSelect(BCM2835_SPI_CS1); // CS1 - for now, with TP CS0 will be used too
 	// setup both SPI.CSx
-    bcm2835_spi_setChipSelectPolarity(BCM2835_SPI_CS0, LOW); // CS0 - active Low
-    bcm2835_spi_setChipSelectPolarity(BCM2835_SPI_CS1, LOW); // CS1 - active Low
-	
+	bcm2835_spi_setChipSelectPolarity(BCM2835_SPI_CS0, LOW); // CS0 - active Low
+	bcm2835_spi_setChipSelectPolarity(BCM2835_SPI_CS1, LOW); // CS1 - active Low
+	bcm2835_spi_chipSelect(BCM2835_SPI_CS1);
+
 	v = bcm2835_version();
 	fprintf(stdout, "bcm2835 library version: %u (0x%08x)\n", v,v);
 	
@@ -115,7 +116,7 @@ int spi_close(void) {
 		
 */
 int spi_transmit(int devsel, uint8_t *data, int len) {
-
+#if 0
 	if (devsel == 0) {
 		bcm2835_spi_chipSelect(BCM2835_SPI_CS0);
 		#ifdef _DEBUG_
@@ -137,7 +138,7 @@ int spi_transmit(int devsel, uint8_t *data, int len) {
 		fprintf(stdout, "\n");
 	#endif
 
-	
+#endif	
 	bcm2835_spi_transfern((char*)data, len);
 	
 	return len;
@@ -189,44 +190,39 @@ void lcd_reset(void) {
 }	
 
 void lcd_data(uint16_t data) {
-	uint8_t b1[4], b2[4];
-	
-	memset(&b1,0,sizeof(b1));
-	memset(&b2,0,sizeof(b2));
+	uint8_t b1[3] = { 0, 0, 0x15 };
+	uint8_t b2[2] = { 0, 0x1f };
 	
 	// setup buffers
-	b2[1] = b1[1] =  data>>8;
-	b2[2] = b1[2] = data&0x00ff;
-	b1[3] = 0x15; // 0x15 - DATA_BE const from ili9341.c (BE is short form "before")
-	b2[3] = 0x1F; // 0x1F - DATA_AF const from ili9341.c (AF is short form "after")
+	b3[0] = b1[0] = data >> 8;
+	b3[1] = b1[1] = data&0x00ff;
 	
 	// Select LCD
 	//bcm2835_spi_chipSelect(BCM2835_SPI_CS1);
 	// send it - prepare
-	spi_transmit(LCD_CS, &b1[0], 4);//bcm2835_spi_transfern(&b1, 4);
+	bcm2835_spi_transfern(b1, 3);//bcm2835_spi_transfern(&b1, 4);
 	// send it - store in LCD
-	spi_transmit(LCD_CS, &b2[0], 4); //bcm2835_spi_transfern(&b2, 4);
+	bcm2835_spi_transfern(b2, 2); //bcm2835_spi_transfern(&b2, 4);
+	//bcm2835_spi_transfern(b3, 5); 
 	
 }
 
 void lcd_cmd(uint16_t cmd) {
-	uint8_t b1[4], b2[4];
-	
-	memset(&b1,0,sizeof(b1));
-	memset(&b2,0,sizeof(b2));
+	uint8_t b1[2] = { 0, 0x11 };
+	uint8_t b2[3] = { 0, 0x1b };
 	
 	// setup buffers
-	b2[1] = b1[1] =  cmd>>8;
-	b2[2] = b1[2] = cmd&0x00ff;
-	b1[3] = 0x11; // 0x11 - CMD_BE const from ili9341.c (BE is short form "before")
-	b2[3] = 0x1B; // 0x1B - CMD_AF const from ili9341.c (AF is short form "after")
+	b1[0] =  cmd&0xff;
+	//b2[2] = b1[2] = cmd&0x00ff;
+	//b1[3] = 0x11; // 0x11 - CMD_BE const from ili9341.c (BE is short form "before")
+	//b2[3] = 0x1B; // 0x1B - CMD_AF const from ili9341.c (AF is short form "after")
 	
 	// Select LCD
 	//bcm2835_spi_chipSelect(BCM2835_SPI_CS1);
 	// send it - prepare
-	spi_transmit(LCD_CS, &b1[0], 4);//bcm2835_spi_transfern(&b1, 4);
+	spi_transmit(LCD_CS, b1, 2);//bcm2835_spi_transfern(&b1, 4);
 	// send it - store in LCD
-	spi_transmit(LCD_CS, &b2[0], 4); //bcm2835_spi_transfern(&b2, 4);
+	spi_transmit(LCD_CS, b2, 2); //bcm2835_spi_transfern(&b2, 4);
 	
 }
 
