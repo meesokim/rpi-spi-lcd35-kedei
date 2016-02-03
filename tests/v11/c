@@ -1,0 +1,2 @@
+gcc -std=gnu11 -D_POSIX_C_SOURCE=200809L -o lcd-test-bcmc lcd_test_bcm.c -lbcm2835
+sudo ./lcd-test-bcmc

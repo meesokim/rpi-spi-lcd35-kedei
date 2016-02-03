@@ -17,6 +17,7 @@
 #include <sys/ioctl.h> // I/O control routines ( ioctl() function)
 //#include <linux/spi/spidev.h> // SPI options
 #include <bcm2835.h>
+#include <time.h>
 
 //#define _DEBUG_
 
@@ -189,13 +190,26 @@ void lcd_reset(void) {
 	delayms(200);
 }	
 
+void lcd_all(uint16_t data)
+{
+        uint8_t b1[3] = { 0, 0, 0x15 };
+        uint8_t b2[2] = { 0, 0x1f };
+	b1[0] = data >> 8;
+	b1[1] = data & 0x0ff;
+	for(int i=0; i < 480*320; i++)
+	{
+		bcm2835_spi_transfern(b1, 3);
+		bcm2835_spi_transfern(b2, 2);
+	}	
+}
+
 void lcd_data(uint16_t data) {
 	uint8_t b1[3] = { 0, 0, 0x15 };
 	uint8_t b2[2] = { 0, 0x1f };
 	
 	// setup buffers
-	b3[0] = b1[0] = data >> 8;
-	b3[1] = b1[1] = data&0x00ff;
+	b1[0] = data >> 8;
+	b1[1] = data&0x00ff;
 	
 	// Select LCD
 	//bcm2835_spi_chipSelect(BCM2835_SPI_CS1);
@@ -281,9 +295,13 @@ void lcd_setarea2(uint16_t sx, uint16_t sy, uint16_t x, uint16_t y) {
 
 void lcd_fill(uint16_t color565) {
 	lcd_setptr();
-	for(int x=0; x<153601;x++) {
+#if 1 
+	for(int x=0; x<320*480;x++) {
 		lcd_data(color565);
 	}
+#else
+	lcd_all(color565);
+#endif
 }
 
 void lcd_fill2(uint16_t sx, uint16_t sy, uint16_t x, uint16_t y, uint16_t color565) {
